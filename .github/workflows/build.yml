@@ -4,31 +4,52 @@ jobs:
   build:
     runs-on: macos-latest
     steps:
-      - name: Setup
-        run: |
-          echo "TARGET = iphone:clang:latest:14.0" > Makefile
-          echo "ARCHS = arm64" >> Makefile
-          echo "include \$(THEOS)/makefiles/common.mk" >> Makefile
-          echo "LIBRARY_NAME = GhostFramework" >> Makefile
-          echo "GhostFramework_FILES = BypassLoader.mm" >> Makefile
-          echo "GhostFramework_CFLAGS = -fobjc-arc" >> Makefile
-          echo "include \$(THEOS_MAKE_PATH)/library.mk" >> Makefile
-          
-          echo "#import <Foundation/Foundation.h>" > BypassLoader.mm
-          echo "#import <dlfcn.h>" >> BypassLoader.mm
-          echo "void cargar() {[NSThread sleepForTimeInterval:8]; dlopen([[[NSBundle mainBundle] bundlePath] stringByAppendingPathComponent:@\"UnityAnalyticsCore.dylib\"].UTF8String, 2);}" >> BypassLoader.mm
-          echo "__attribute__((constructor)) static void init() {dispatch_async(dispatch_get_global_queue(0,0), ^{cargar();});}" >> BypassLoader.mm
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Install
+      - name: Create Makefile
+        run: |
+          cat << 'EOF' > Makefile
+          TARGET = iphone:clang:latest:14.0
+          ARCHS = arm64
+          include $(THEOS)/makefiles/common.mk
+          LIBRARY_NAME = GhostFramework
+          GhostFramework_FILES = BypassLoader.mm
+          GhostFramework_CFLAGS = -fobjc-arc
+          include $(THEOS_MAKE_PATH)/library.mk
+          EOF
+
+      - name: Create Source Code
+        run: |
+          cat << 'EOF' > BypassLoader.mm
+          #import <Foundation/Foundation.h>
+          #import <dlfcn.h>
+          #import <mach-o/dyld.h>
+
+          void cargarMod() {
+              [NSThread sleepForTimeInterval:8];
+              NSString *path = [[NSBundle mainBundle] bundlePath];
+              NSString *dylib = [path stringByAppendingPathComponent:@"UnityAnalyticsCore.dylib"];
+              dlopen([dylib UTF8String], RTLD_NOW);
+          }
+
+          __attribute__((constructor)) static void init() {
+              dispatch_async(dispatch_get_global_queue(0, 0), ^{
+                  cargarMod();
+              });
+          }
+          EOF
+
+      - name: Install Theos
         run: bash -c "$(curl -fsSL https://raw.githubusercontent.com/theos/theos/master/bin/install-theos)"
 
-      - name: Final_Build
+      - name: Compile
         run: |
           export THEOS=~/theos
           make package
           
-      - name: Get_File
+      - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: Ghost_Dylib
+          name: GhostFramework_Final
           path: packages/*.deb
