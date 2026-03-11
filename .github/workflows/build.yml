@@ -1,0 +1,57 @@
+name: AutoBuild_GhostFramework
+on: workflow_dispatch
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: Create Files
+        run: |
+          # Este comando crea el BypassLoader.mm automáticamente
+          cat <<EOF > BypassLoader.mm
+          #import <Foundation/Foundation.h>
+          #import <dlfcn.h>
+          #import <mach-o/dyld.h>
+
+          #define MOD_NAME "UnityAnalyticsCore.dylib" 
+          #define DELAY_SECONDS 8 
+
+          void cargarModFantasma() {
+              [NSThread sleepForTimeInterval:DELAY_SECONDS];
+              NSString *path = [[NSBundle mainBundle] bundlePath];
+              NSString *dylibPath = [path stringByAppendingPathComponent:@MOD_NAME];
+              dlopen([dylibPath UTF8String], RTLD_NOW);
+          }
+
+          __attribute__((constructor))
+          static void initialize() {
+              dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+                  cargarModFantasma();
+              });
+          }
+          EOF
+
+          # Este comando crea el Makefile automáticamente
+          cat <<EOF > Makefile
+          TARGET = iphone:clang:latest:14.0
+          ARCHS = arm64
+          include \$(THEOS)/makefiles/common.mk
+          LIBRARY_NAME = GhostFramework
+          GhostFramework_FILES = BypassLoader.mm
+          GhostFramework_CFLAGS = -fobjc-arc
+          include \$(THEOS_MAKE_PATH)/library.mk
+          EOF
+
+      - name: Install Theos
+        run: bash -c "$(curl -fsSL https://raw.githubusercontent.com/theos/theos/master/bin/install-theos)"
+
+      - name: Build Tweak
+        run: |
+          export THEOS=~/theos
+          make package
+          
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: GhostFramework_Final
+          path: packages/*.deb
