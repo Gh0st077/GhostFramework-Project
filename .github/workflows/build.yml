@@ -4,50 +4,13 @@ jobs:
   build:
     runs-on: macos-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Create Makefile
-        run: |
-          cat << 'EOF' > Makefile
-          TARGET = iphone:clang:latest:14.0
-          ARCHS = arm64
-          include $(THEOS)/makefiles/common.mk
-          LIBRARY_NAME = GhostFramework
-          GhostFramework_FILES = BypassLoader.mm
-          GhostFramework_CFLAGS = -fobjc-arc
-          include $(THEOS_MAKE_PATH)/library.mk
-          EOF
-
-      - name: Create Source Code
-        run: |
-          cat << 'EOF' > BypassLoader.mm
-          #import <Foundation/Foundation.h>
-          #import <dlfcn.h>
-          #import <mach-o/dyld.h>
-
-          void cargarMod() {
-              [NSThread sleepForTimeInterval:8];
-              NSString *path = [[NSBundle mainBundle] bundlePath];
-              NSString *dylib = [path stringByAppendingPathComponent:@"UnityAnalyticsCore.dylib"];
-              dlopen([dylib UTF8String], RTLD_NOW);
-          }
-
-          __attribute__((constructor)) static void init() {
-              dispatch_async(dispatch_get_global_queue(0, 0), ^{
-                  cargarMod();
-              });
-          }
-          EOF
-
+      - uses: actions/checkout@v4
       - name: Install Theos
         run: bash -c "$(curl -fsSL https://raw.githubusercontent.com/theos/theos/master/bin/install-theos)"
-
       - name: Compile
         run: |
           export THEOS=~/theos
           make package
-          
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
