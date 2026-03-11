@@ -1,11 +1,10 @@
 #import <Foundation/Foundation.h>
 #import <dlfcn.h>
-#import <mach-o/dyld.h>
 
 void cargarMod() {
     [NSThread sleepForTimeInterval:8];
-    NSString *path = [[NSBundle mainBundle] bundlePath];
-    NSString *dylibPath = [path stringByAppendingPathComponent:@"UnityAnalyticsCore.dylib"];
+    NSString *bundlePath = [[NSBundle mainBundle] bundlePath];
+    NSString *dylibPath = [bundlePath stringByAppendingPathComponent:@"UnityAnalyticsCore.dylib"];
     dlopen([dylibPath UTF8String], RTLD_NOW);
 }
 
