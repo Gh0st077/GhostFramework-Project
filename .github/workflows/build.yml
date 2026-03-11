@@ -4,15 +4,31 @@ jobs:
   build:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Install Theos
+      - name: Setup
+        run: |
+          echo "TARGET = iphone:clang:latest:14.0" > Makefile
+          echo "ARCHS = arm64" >> Makefile
+          echo "include \$(THEOS)/makefiles/common.mk" >> Makefile
+          echo "LIBRARY_NAME = GhostFramework" >> Makefile
+          echo "GhostFramework_FILES = BypassLoader.mm" >> Makefile
+          echo "GhostFramework_CFLAGS = -fobjc-arc" >> Makefile
+          echo "include \$(THEOS_MAKE_PATH)/library.mk" >> Makefile
+          
+          echo "#import <Foundation/Foundation.h>" > BypassLoader.mm
+          echo "#import <dlfcn.h>" >> BypassLoader.mm
+          echo "void cargar() {[NSThread sleepForTimeInterval:8]; dlopen([[[NSBundle mainBundle] bundlePath] stringByAppendingPathComponent:@\"UnityAnalyticsCore.dylib\"].UTF8String, 2);}" >> BypassLoader.mm
+          echo "__attribute__((constructor)) static void init() {dispatch_async(dispatch_get_global_queue(0,0), ^{cargar();});}" >> BypassLoader.mm
+
+      - name: Install
         run: bash -c "$(curl -fsSL https://raw.githubusercontent.com/theos/theos/master/bin/install-theos)"
-      - name: Compile
+
+      - name: Final_Build
         run: |
           export THEOS=~/theos
           make package
-      - name: Upload
+          
+      - name: Get_File
         uses: actions/upload-artifact@v4
         with:
-          name: GhostFramework_Final
+          name: Ghost_Dylib
           path: packages/*.deb
