@@ -1,0 +1,45 @@
+name: UnityTraceLab iOS dylib
+on:
+  push:
+    branches: [unity-tracelab-mvp]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: xcode-27
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Restore source
+        run: |
+          set -euo pipefail
+          cd UnityTraceLab/src
+          base64 -D -i UnityTraceLab.mm.gz.b64 | gzip -d > UnityTraceLab.mm
+          test -s UnityTraceLab.mm
+      - name: Compile unsigned arm64 iOS dylib
+        run: |
+          set -euo pipefail
+          mkdir -p UnityTraceLab/dist
+          SDK="$(xcrun --sdk iphoneos --show-sdk-path)"
+          xcrun --sdk iphoneos clang++ \
+            -arch arm64 -x objective-c++ -std=c++17 -fobjc-arc -fmodules \
+            -dynamiclib -miphoneos-version-min=14.0 -isysroot "$SDK" -O2 \
+            -Wl,-install_name,@rpath/UnityTraceLab.dylib \
+            -framework UIKit -framework Foundation \
+            -o UnityTraceLab/dist/UnityTraceLab.dylib \
+            UnityTraceLab/src/UnityTraceLab.mm
+          file UnityTraceLab/dist/UnityTraceLab.dylib
+          xcrun --sdk iphoneos otool -hv UnityTraceLab/dist/UnityTraceLab.dylib | grep MH_DYLIB
+      - name: Package library and readable source
+        run: |
+          cp UnityTraceLab/README.md UnityTraceLab/dist/
+          cp UnityTraceLab/LICENSE UnityTraceLab/dist/
+          cp UnityTraceLab/src/UnityTraceLab.mm UnityTraceLab/dist/
+      - name: Upload test artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: UnityTraceLab-v0.1-iOS-dylib
+          path: UnityTraceLab/dist/
+          if-no-files-found: error
+          retention-days: 14
