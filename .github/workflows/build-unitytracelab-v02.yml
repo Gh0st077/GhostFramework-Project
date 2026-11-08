@@ -1,0 +1,82 @@
+name: UnityTraceLab v0.2 iOS runtime tracing
+
+on:
+  push:
+    branches: [unity-tracelab-mvp]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-ios-dylib:
+    runs-on: xcode-27
+    timeout-minutes: 45
+    steps:
+      - name: Checkout standalone UnityTraceLab sources
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Fetch pinned Apache-2.0 Dobby instrumentation backend
+        run: |
+          set -euo pipefail
+          git clone https://github.com/jmpews/Dobby.git Dobby
+          git -C Dobby checkout 5dfc8546954ce3b3198132ab13fddb89ee92cdd7
+          test -f Dobby/LICENSE
+          test -f Dobby/include/dobby.h
+
+      - name: Compile Dobby static library for physical iPhone
+        run: |
+          set -euo pipefail
+          cmake -S Dobby -B Dobby/out-ios \
+            -DCMAKE_SYSTEM_NAME=iOS \
+            -DCMAKE_OSX_SYSROOT=iphoneos \
+            -DCMAKE_OSX_ARCHITECTURES=arm64 \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0 \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DPlugin.SymbolResolver=OFF \
+            -DDOBBY_BUILD_EXAMPLE=OFF \
+            -DDOBBY_BUILD_TEST=OFF
+          cmake --build Dobby/out-ios --target dobby_static --config Release --parallel 4
+          find Dobby/out-ios -name 'libdobby.a' -print
+
+      - name: Compile UnityTraceLab 0.2 unsigned ARM64 dylib
+        run: |
+          set -euo pipefail
+          mkdir -p UnityTraceLab/v02/dist
+          SDK="$(xcrun --sdk iphoneos --show-sdk-path)"
+          DOBBY_LIB="$(find Dobby/out-ios -name 'libdobby.a' -type f | head -n 1)"
+          test -n "$DOBBY_LIB"
+          xcrun --sdk iphoneos clang++ \
+            -arch arm64 -x objective-c++ -std=c++17 -fobjc-arc -fmodules \
+            -dynamiclib -miphoneos-version-min=15.0 -isysroot "$SDK" -O2 \
+            -Wl,-install_name,@rpath/UnityTraceLab-v0.2.dylib \
+            -IUnityTraceLab/v02 \
+            -framework UIKit -framework Foundation -framework CoreFoundation \
+            -lc++ \
+            -o UnityTraceLab/v02/dist/UnityTraceLab-v0.2.dylib \
+            UnityTraceLab/v02/TraceCore.mm \
+            UnityTraceLab/v02/Overlay.mm \
+            "$DOBBY_LIB"
+          file UnityTraceLab/v02/dist/UnityTraceLab-v0.2.dylib
+          xcrun --sdk iphoneos otool -hv UnityTraceLab/v02/dist/UnityTraceLab-v0.2.dylib | grep -E 'DYLIB|0x6'
+
+      - name: Verify package contents
+        run: |
+          set -euo pipefail
+          cp UnityTraceLab/v02/README.md UnityTraceLab/v02/dist/README.md
+          cp UnityTraceLab/v02/LICENSE UnityTraceLab/v02/dist/UnityTraceLab-LICENSE.txt
+          cp Dobby/LICENSE UnityTraceLab/v02/dist/Dobby-Apache-LICENSE.txt
+          cp UnityTraceLab/v02/TraceCore.h UnityTraceLab/v02/dist/TraceCore.h
+          xcrun --sdk iphoneos nm -gU UnityTraceLab/v02/dist/UnityTraceLab-v0.2.dylib | head -n 40 || true
+
+      - name: Publish GitHub test artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: UnityTraceLab-v0.2-arm64
+          path: UnityTraceLab/v02/dist/*
+          if-no-files-found: error
+          retention-days: 14
