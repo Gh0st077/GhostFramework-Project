@@ -32,7 +32,7 @@ jobs:
             -o UnityTraceLab/dist/UnityTraceLab.dylib \
             UnityTraceLab/src/UnityTraceLab.mm
           file UnityTraceLab/dist/UnityTraceLab.dylib
-          xcrun --sdk iphoneos otool -hv UnityTraceLab/dist/UnityTraceLab.dylib | grep MH_DYLIB
+          xcrun --sdk iphoneos otool -hv UnityTraceLab/dist/UnityTraceLab.dylib | tee /dev/stderr | grep -E 'DYLIB|0x6'
       - name: Package library and readable source
         run: |
           cp UnityTraceLab/README.md UnityTraceLab/dist/
