@@ -95,8 +95,9 @@ static BOOL UTCodeSection(uintptr_t address, size_t *remaining, NSString **modul
         const struct mach_header *hdr = _dyld_get_image_header(i);
         if (!hdr || hdr->magic != MH_MAGIC_64) continue;
         intptr_t slide = _dyld_get_image_vmaddr_slide(i);
-        const uint8_t *cursor = (const uint8_t *)(hdr+1);
         const struct mach_header_64 *mh = (const struct mach_header_64 *)hdr;
+        // arm64 Mach-O header is 32 bytes (not 28-byte mach_header).
+        const uint8_t *cursor = (const uint8_t *)(mh+1);
         for (uint32_t j=0;j<mh->ncmds;++j) {
             const struct load_command *lc = (const struct load_command *)cursor;
             if (lc->cmdsize < sizeof(*lc)) break;
