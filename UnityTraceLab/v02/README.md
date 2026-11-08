@@ -21,7 +21,7 @@ Companion research tool inspired by https://github.com/tien0246/IOS-Il2CppDumper
 3. Press 1 to index methods and RVAs, then 2 to arm a filter that resolves to 1–8 executable functions.
 4. Start BASELINE, perform ordinary/control actions, and end the interval.
 5. Start TARGET, perform one experimental action, and end the interval.
-6. Compare and export; repeat several controlled trials, then disarm hooks.
+6. Compare; repeat several controlled trials. Disarm hooks before exporting unmodified code samples, then use Share to export logs and bytes.
 
 ## Compatibility, safety, limitations
 
