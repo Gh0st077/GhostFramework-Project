@@ -35,6 +35,8 @@ jobs:
             -DCMAKE_SYSTEM_NAME=iOS \
             -DCMAKE_OSX_SYSROOT=iphoneos \
             -DCMAKE_OSX_ARCHITECTURES=arm64 \
+            -DCMAKE_SYSTEM_PROCESSOR=arm64 \
+            -DDOBBY_BUILD_SILICON=ON \
             -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0 \
             -DCMAKE_BUILD_TYPE=Release \
             -DPlugin.SymbolResolver=OFF \
@@ -60,7 +62,7 @@ jobs:
             -o UnityTraceLab/v02/dist/UnityTraceLab-v0.2.dylib \
             UnityTraceLab/v02/TraceCore.mm \
             UnityTraceLab/v02/Overlay.mm \
-            "$DOBBY_LIB"
+            -x none "$DOBBY_LIB"
           file UnityTraceLab/v02/dist/UnityTraceLab-v0.2.dylib
           xcrun --sdk iphoneos otool -hv UnityTraceLab/v02/dist/UnityTraceLab-v0.2.dylib | grep -E 'DYLIB|0x6'
 
