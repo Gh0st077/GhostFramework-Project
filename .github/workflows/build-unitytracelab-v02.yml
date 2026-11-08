@@ -39,7 +39,7 @@ jobs:
             -DDOBBY_BUILD_SILICON=ON \
             -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0 \
             -DCMAKE_BUILD_TYPE=Release \
-            -DPlugin.SymbolResolver=OFF \
+            -DPlugin.SymbolResolver=ON \
             -DDOBBY_BUILD_EXAMPLE=OFF \
             -DDOBBY_BUILD_TEST=OFF
           cmake --build Dobby/out-ios --target dobby_static --config Release --parallel 4
