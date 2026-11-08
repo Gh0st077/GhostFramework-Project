@@ -2,6 +2,8 @@ name: UnityTraceLab iOS dylib
 on:
   push:
     branches: [unity-tracelab-mvp]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 permissions:
   contents: read
