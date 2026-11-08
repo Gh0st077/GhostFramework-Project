@@ -448,6 +448,7 @@ static NSDictionary *UTError(NSString *code, NSString *detail) {
 - (NSDictionary *)exportCodeSamples {
     @synchronized(self) {
         if(!_catalog.count)return UTError(@"EMPTY_CATALOG",@"Index methods before exporting bytes");
+        if (_tracked.count) return UTError(@"DISARM_FOR_CODE",@"Disarm hooks before exporting code, to avoid capturing instrumentation patches");
         NSString *samples=[UTDir() stringByAppendingPathComponent:@"code_samples"];
         [[NSFileManager defaultManager] createDirectoryAtPath:samples withIntermediateDirectories:YES attributes:nil error:nil];
         [[NSFileManager defaultManager] removeItemAtPath:UTPath(@"code_manifest.jsonl") error:nil];
