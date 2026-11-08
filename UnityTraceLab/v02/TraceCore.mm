@@ -4,7 +4,6 @@
 #import "TraceCore.h"
 #import <CommonCrypto/CommonDigest.h>
 #import <mach/mach.h>
-#import <mach/mach_vm.h>
 #import <mach/mach_time.h>
 #import <mach-o/dyld.h>
 #import <mach-o/loader.h>
@@ -130,18 +129,18 @@ static NSData *UTReadCode(uintptr_t address, NSUInteger requested) {
     size_t size=MIN((size_t)requested, remain);
     if (!size || size>4096) return nil;
     NSMutableData *bytes=[NSMutableData dataWithLength:size];
-    mach_vm_size_t obtained=0;
-    kern_return_t status=mach_vm_read_overwrite(mach_task_self(),(mach_vm_address_t)address,
-                              size,(mach_vm_address_t)bytes.mutableBytes,&obtained);
+    vm_size_t obtained=0;
+    kern_return_t status=vm_read_overwrite(mach_task_self(),(vm_address_t)address,
+                              size,(vm_address_t)bytes.mutableBytes,&obtained);
     if (status != KERN_SUCCESS || obtained != size) return nil;
     return bytes;
 }
 static uintptr_t UTMethodPointer(const MethodInfo *method) {
     if (!method) return 0;
     uintptr_t ptr=0;
-    mach_vm_size_t n=0;
-    kern_return_t kr=mach_vm_read_overwrite(mach_task_self(),(mach_vm_address_t)method,
-                                            sizeof(ptr),(mach_vm_address_t)&ptr,&n);
+    vm_size_t n=0;
+    kern_return_t kr=vm_read_overwrite(mach_task_self(),(vm_address_t)method,
+                                            sizeof(ptr),(vm_address_t)&ptr,&n);
     if (kr != KERN_SUCCESS || n != sizeof(ptr)) return 0;
 #if __has_feature(ptrauth_calls)
     ptr = (uintptr_t)__builtin_ptrauth_strip((void *)ptr, 0);
