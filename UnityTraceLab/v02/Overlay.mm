@@ -74,9 +74,9 @@
         @[@"4. Start TARGET event",NSStringFromSelector(@selector(targetAction))],
         @[@"5. End interval",NSStringFromSelector(@selector(endAction))],
         @[@"6. Compare + rank functions",NSStringFromSelector(@selector(compareAction))],
-        @[@"7. Export machine-code samples",NSStringFromSelector(@selector(codeAction))],
-        @[@"8. Export logs / Share",NSStringFromSelector(@selector(shareAction))],
-        @[@"9. DISARM + restore hooks",NSStringFromSelector(@selector(disarmAction))]
+        @[@"7. DISARM + restore hooks",NSStringFromSelector(@selector(disarmAction))],
+        @[@"8. Export unhooked code samples",NSStringFromSelector(@selector(codeAction))],
+        @[@"9. Export logs / Share",NSStringFromSelector(@selector(shareAction))]
     ];
     CGFloat y=0;
     for(NSArray *item in items) {
