@@ -1,0 +1,60 @@
+name: Build Compatibility Fixture (.NET 10)
+on:
+  push:
+    branches:
+      - advanced-exe-compatibility-fixture
+    paths:
+      - '.github/workflows/build-compatibility-fixture.yml'
+      - 'compatibility-fixture/**'
+      - 'scripts/compare-reports.ps1'
+  pull_request:
+    paths:
+      - '.github/workflows/build-compatibility-fixture.yml'
+      - 'compatibility-fixture/**'
+      - 'scripts/compare-reports.ps1'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build-test:
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Publish framework-dependent Windows EXE
+        shell: pwsh
+        run: |
+          dotnet publish compatibility-fixture/CompatibilityFixture.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=false -p:PublishTrimmed=false -o artifacts/framework
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Publish self-contained single-file Windows EXE
+        shell: pwsh
+        run: |
+          dotnet publish compatibility-fixture/CompatibilityFixture.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:PublishTrimmed=false -p:EnableCompressionInSingleFile=false -o artifacts/standalone
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Test both EXEs and compare internal functions
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force artifacts/reports | Out-Null
+          $framework = (Resolve-Path 'artifacts/framework/CompatibilityFixture.exe').Path
+          $standalone = (Resolve-Path 'artifacts/standalone/CompatibilityFixture.exe').Path
+          $base = Join-Path (Get-Location) 'artifacts/reports/original-framework.json'
+          $other = Join-Path (Get-Location) 'artifacts/reports/original-singlefile.json'
+          $a = Start-Process -FilePath $framework -ArgumentList @('--out', $base) -Wait -PassThru
+          if ($a.ExitCode -ne 0) { throw "Framework EXE tests failed: $($a.ExitCode)" }
+          $b = Start-Process -FilePath $standalone -ArgumentList @('--out', $other) -Wait -PassThru
+          if ($b.ExitCode -ne 0) { throw "Self-contained EXE tests failed: $($b.ExitCode)" }
+          & ./scripts/compare-reports.ps1 -Baseline $base -Candidate $other
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Upload Windows binaries + comparison results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: AdvancedEXE-CompatibilityFixture-win-x64
+          path: |
+            artifacts/framework/**
+            artifacts/standalone/**
+            artifacts/reports/**
+          retention-days: 30

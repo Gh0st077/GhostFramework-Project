@@ -1,0 +1,2 @@
+ADVANCED_EXE_PROTECTOR_TEST_RESOURCE_V1
+This embedded resource tests resource lookup after executable transformation.
